@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import { makeWASocket, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import qrcode from 'qrcode';
+import { usePostgresAuthState } from './usePostgresAuthState.js';
 
 dotenv.config();
 
@@ -17,8 +18,17 @@ let sock;
 let isConnected = false;
 let currentQR = null;
 
+let clearDBState = null;
+
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+        console.error("Missing DATABASE_URL");
+        return;
+    }
+    
+    const { state, saveCreds, clearState } = await usePostgresAuthState(dbUrl);
+    clearDBState = clearState;
 
     sock = makeWASocket({
         auth: state,
@@ -43,8 +53,8 @@ async function connectToWhatsApp() {
             if (shouldReconnect) {
                 connectToWhatsApp();
             } else {
-                console.log('Logged out. Delete auth_info_baileys folder to scan new QR.');
-                fs.rmSync('auth_info_baileys', { recursive: true, force: true });
+                console.log('Logged out. Clearing auth from DB to scan new QR.');
+                if (clearDBState) await clearDBState();
                 connectToWhatsApp();
             }
         } else if (connection === 'open') {
