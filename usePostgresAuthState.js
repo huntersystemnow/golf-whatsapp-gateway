@@ -1,6 +1,6 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import { BufferJSON, initAuthCreds, proto } from '@whiskeysockets/baileys';
+import { BufferJSON, initAuthCreds, proto } from '@pontalabs/baileys';
 
 export const usePostgresAuthState = async (connectionString) => {
     const pool = new Pool({

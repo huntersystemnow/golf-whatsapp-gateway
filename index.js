@@ -1,9 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@whiskeysockets/baileys';
+import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@pontalabs/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import pg from 'pg';
 import qrcode from 'qrcode';
 import { usePostgresAuthState } from './usePostgresAuthState.js';
 
@@ -115,6 +116,14 @@ app.post('/pair', async (req, res) => {
     try {
         if (!sock.authState.creds.registered) {
             let cleanPhone = phone.replace(/[^0-9]/g, '');
+            if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+                cleanPhone = '55' + cleanPhone;
+            }
+
+            if (!cleanPhone || cleanPhone.length < 10) {
+                return res.status(400).json({ error: 'Número de telefone inválido' });
+            }
+
             const code = await sock.requestPairingCode(cleanPhone);
             currentPairingCode = code;
             console.log(`Pairing code generated for ${cleanPhone}: ${code}`);
