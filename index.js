@@ -261,8 +261,10 @@ app.get('/', (req, res) => {
                             qrContainer.style.display = 'block';
                             qrImage.src = data.qr;
                         } else {
-                            statusEl.innerText = 'Iniciando sistema...';
-                            contentContainer.style.display = 'none';
+                            statusEl.innerText = 'O robô está tentando conectar. Se não aparecer o QR Code, use o código numérico!';
+                            statusEl.style.color = '#fff';
+                            contentContainer.style.display = 'inline-block';
+                            qrContainer.style.display = 'none';
                         }
                     } catch (e) {
                         document.getElementById('status').innerText = 'Gateway Offline';
