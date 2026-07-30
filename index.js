@@ -51,7 +51,7 @@ async function connectToWhatsApp() {
 
     const { state, saveCreds } = await usePostgresAuthState(pool, 'golf-bot');
     const { version, isLatest } = await fetchLatestBaileysVersion();
-    console.log(\`Using wa v\${version.join('.')}, isLatest: \${isLatest}\`);
+    console.log(`Using wa v${version.join('.')}, isLatest: ${isLatest}`);
 
     client = makeWASocket({
         version,
@@ -100,7 +100,7 @@ async function connectToWhatsApp() {
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
         if (text) {
-            console.log(\`Received message from \${from}: \${text}\`);
+            console.log(`Received message from ${from}: ${text}`);
             try {
                 const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:5173/api/webhook/whatsapp';
                 await fetch(webhookUrl, {
@@ -144,7 +144,7 @@ app.post('/send', async (req, res) => {
     try {
         let jid = to;
         if (!jid.includes('@')) {
-            jid = \`\${to}@s.whatsapp.net\`;
+            jid = `${to}@s.whatsapp.net`;
         }
         await client.sendMessage(jid, { text: message });
         res.json({ success: true, message: 'Message queued to be sent.' });
@@ -155,7 +155,7 @@ app.post('/send', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.send(\`
+    res.send(`
         <html>
             <head>
                 <title>WhatsApp Gateway</title>
@@ -209,9 +209,9 @@ app.get('/', (req, res) => {
                 </script>
             </body>
         </html>
-    \`);
+    `);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(\`Golf WhatsApp Gateway is running on port \${PORT} with Baileys\`);
+    console.log(`Golf WhatsApp Gateway is running on port ${PORT} with Baileys`);
 });
