@@ -10,6 +10,13 @@ import { usePostgresAuthState } from './pgAuthState.js';
 
 dotenv.config();
 
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION:', reason);
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -37,82 +44,86 @@ console.error = function(...args) {
 app.get('/debug-logs', (req, res) => res.json(logs));
 
 async function connectToWhatsApp() {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-        console.error("Missing DATABASE_URL");
-        return;
+    try {
+        const dbUrl = process.env.DATABASE_URL;
+        if (!dbUrl) {
+            console.error("Missing DATABASE_URL");
+            return;
+        }
+
+        console.log('Connecting to PostgreSQL for Baileys session storage...');
+        const pool = new Pool({
+            connectionString: dbUrl,
+            ssl: { rejectUnauthorized: false }
+        });
+
+        const { state, saveCreds } = await usePostgresAuthState(pool, 'golf-bot');
+        const { version, isLatest } = await fetchLatestBaileysVersion();
+        console.log(`Using wa v${version.join('.')}, isLatest: ${isLatest}`);
+
+        client = makeWASocket({
+            version,
+            logger,
+            printQRInTerminal: false,
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, logger),
+            },
+            generateHighQualityLinkPreview: true,
+        });
+
+        client.ev.on('creds.update', saveCreds);
+
+        client.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
+            
+            if (qr) {
+                console.log('New QR Code generated.');
+                currentQR = await qrcode.toDataURL(qr);
+            }
+
+            if (connection === 'close') {
+                isConnected = false;
+                currentQR = null;
+                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                console.log('Connection closed due to', lastDisconnect?.error, 'reconnecting:', shouldReconnect);
+                if (shouldReconnect) {
+                    setTimeout(connectToWhatsApp, 2000);
+                } else {
+                    console.log('Logged out. Wiping session not fully implemented here yet, but reconnecting...');
+                    setTimeout(connectToWhatsApp, 2000);
+                }
+            } else if (connection === 'open') {
+                console.log('Opened connection to WhatsApp!');
+                isConnected = true;
+                currentQR = null;
+            }
+        });
+
+        client.ev.on('messages.upsert', async (m) => {
+            const msg = m.messages[0];
+            if (!msg.message || msg.key.fromMe) return;
+
+            const from = msg.key.remoteJid.split('@')[0];
+            const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+            if (text) {
+                console.log(`Received message from ${from}: ${text}`);
+                try {
+                    const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:5173/api/webhook/whatsapp';
+                    await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ from, text })
+                    });
+                } catch (err) {
+                    console.error('Failed to send to webhook:', err);
+                }
+            }
+        });
+    } catch (err) {
+        console.error("FATAL ERROR IN CONNECT:", err);
     }
-
-    console.log('Connecting to PostgreSQL for Baileys session storage...');
-    const pool = new Pool({
-        connectionString: dbUrl,
-        ssl: { rejectUnauthorized: false }
-    });
-
-    const { state, saveCreds } = await usePostgresAuthState(pool, 'golf-bot');
-    const { version, isLatest } = await fetchLatestBaileysVersion();
-    console.log(`Using wa v${version.join('.')}, isLatest: ${isLatest}`);
-
-    client = makeWASocket({
-        version,
-        logger,
-        printQRInTerminal: false,
-        auth: {
-            creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, logger),
-        },
-        generateHighQualityLinkPreview: true,
-    });
-
-    client.ev.on('creds.update', saveCreds);
-
-    client.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (qr) {
-            console.log('New QR Code generated.');
-            currentQR = await qrcode.toDataURL(qr);
-        }
-
-        if (connection === 'close') {
-            isConnected = false;
-            currentQR = null;
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed due to', lastDisconnect?.error, 'reconnecting:', shouldReconnect);
-            if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 2000);
-            } else {
-                console.log('Logged out. Wiping session not fully implemented here yet, but reconnecting...');
-                setTimeout(connectToWhatsApp, 2000);
-            }
-        } else if (connection === 'open') {
-            console.log('Opened connection to WhatsApp!');
-            isConnected = true;
-            currentQR = null;
-        }
-    });
-
-    client.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-
-        const from = msg.key.remoteJid.split('@')[0];
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-
-        if (text) {
-            console.log(`Received message from ${from}: ${text}`);
-            try {
-                const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:5173/api/webhook/whatsapp';
-                await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from, text })
-                });
-            } catch (err) {
-                console.error('Failed to send to webhook:', err);
-            }
-        }
-    });
 }
 
 connectToWhatsApp();
