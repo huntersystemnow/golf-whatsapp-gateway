@@ -33,6 +33,9 @@ async function connectToWhatsApp() {
         ssl: { rejectUnauthorized: false }
     });
 
+    console.log('Dropping old whatsapp_sessions table to force schema update...');
+    await pool.query('DROP TABLE IF EXISTS whatsapp_sessions CASCADE;');
+
     // Initialize PostgresStore
     const store = new PostgresStore({ pool });
 
