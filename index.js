@@ -51,9 +51,6 @@ async function connectToWhatsApp() {
         ssl: { rejectUnauthorized: false }
     });
 
-    console.log('Dropping old whatsapp_sessions table to force schema update...');
-    await pool.query('DROP TABLE IF EXISTS whatsapp_sessions CASCADE;');
-
     // Initialize PostgresStore
     const store = new PostgresStore({ pool });
 
@@ -66,8 +63,15 @@ async function connectToWhatsApp() {
         puppeteer: {
             executablePath: await puppeteer.executablePath(),
             headless: true,
-            dumpio: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote',
+                '--disable-extensions'
+            ]
         }
     });
 
