@@ -8,6 +8,7 @@ import pg from 'pg';
 const { Pool } = pg;
 import dotenv from 'dotenv';
 import qrcode from 'qrcode';
+import puppeteer from 'puppeteer';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ async function connectToWhatsApp() {
             backupSyncIntervalMs: 60000 // Backup every 1 minute
         }),
         puppeteer: {
+            executablePath: puppeteer.executablePath(),
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         }
