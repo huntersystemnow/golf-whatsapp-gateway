@@ -46,7 +46,7 @@ async function connectToWhatsApp() {
             backupSyncIntervalMs: 60000 // Backup every 1 minute
         }),
         puppeteer: {
-            executablePath: puppeteer.executablePath(),
+            executablePath: await puppeteer.executablePath(),
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         }
