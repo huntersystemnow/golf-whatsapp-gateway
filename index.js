@@ -68,9 +68,7 @@ async function connectToWhatsApp() {
                 '--disable-setuid-sandbox', 
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--single-process',
-                '--no-zygote',
-                '--disable-extensions'
+                '--no-zygote'
             ]
         }
     });
@@ -78,6 +76,18 @@ async function connectToWhatsApp() {
     client.on('qr', async (qr) => {
         console.log('New QR Code generated.');
         currentQR = await qrcode.toDataURL(qr);
+    });
+
+    client.on('authenticated', (session) => {
+        console.log('AUTHENTICATED EVENT FIRED!', session);
+    });
+
+    client.on('auth_failure', (msg) => {
+        console.error('AUTHENTICATION FAILURE EVENT FIRED!', msg);
+    });
+
+    client.on('remote_session_saved', () => {
+        console.log('REMOTE SESSION SAVED EVENT FIRED!');
     });
 
     client.on('ready', () => {
