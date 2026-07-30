@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@pontalabs/baileys';
+import { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import dotenv from 'dotenv';
