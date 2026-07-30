@@ -21,6 +21,23 @@ let client;
 let isConnected = false;
 let currentQR = null;
 
+// DEBUG: capture console logs
+const logs = [];
+const originalLog = console.log;
+const originalError = console.error;
+console.log = function(...args) {
+    logs.push({ level: 'info', msg: args.join(' '), time: new Date() });
+    if (logs.length > 50) logs.shift();
+    originalLog.apply(console, args);
+};
+console.error = function(...args) {
+    logs.push({ level: 'error', msg: args.join(' '), time: new Date() });
+    if (logs.length > 50) logs.shift();
+    originalError.apply(console, args);
+};
+
+app.get('/debug-logs', (req, res) => res.json(logs));
+
 async function connectToWhatsApp() {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) {
@@ -42,6 +59,7 @@ async function connectToWhatsApp() {
 
     client = new Client({
         authStrategy: new RemoteAuth({
+            clientId: 'golf-bot',
             store: store,
             backupSyncIntervalMs: 60000 // Backup every 1 minute
         }),
