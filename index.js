@@ -90,12 +90,21 @@ async function connectToWhatsApp() {
         }
     });
 
-    client.initialize();
+    try {
+        console.log("Starting client initialization...");
+        await client.initialize();
+    } catch (err) {
+        console.error("Puppeteer/Client failed to initialize:", err);
+        global.initError = err.message || err.toString();
+    }
 }
 
 connectToWhatsApp();
 
 app.get('/qr', (req, res) => {
+    if (global.initError) {
+        return res.json({ status: 'error', message: 'Engine failed to start: ' + global.initError });
+    }
     if (isConnected) {
         return res.json({ status: 'connected', message: 'WhatsApp is already connected.' });
     }
@@ -166,6 +175,10 @@ app.get('/', (req, res) => {
                         if (data.status === 'connected') {
                             statusEl.innerText = '✅ Robô Conectado com Sucesso!';
                             statusEl.style.color = '#4CAF50';
+                            contentContainer.style.display = 'none';
+                        } else if (data.status === 'error') {
+                            statusEl.innerText = '❌ Erro fatal: ' + data.message;
+                            statusEl.style.color = '#F44336';
                             contentContainer.style.display = 'none';
                         } else if (data.status === 'pending' && data.qr) {
                             statusEl.innerText = '⚠️ Aponte a câmera do WhatsApp!';
