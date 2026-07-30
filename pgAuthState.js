@@ -2,7 +2,7 @@ import { initAuthCreds, BufferJSON } from '@whiskeysockets/baileys';
 
 export const usePostgresAuthState = async (pool, sessionName = 'baileys_session') => {
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+        CREATE TABLE IF NOT EXISTS baileys_sessions (
             id VARCHAR(255) PRIMARY KEY,
             session_data TEXT NOT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -12,7 +12,7 @@ export const usePostgresAuthState = async (pool, sessionName = 'baileys_session'
     const writeData = async (data, id) => {
         const textData = JSON.stringify(data, BufferJSON.replacer);
         await pool.query(`
-            INSERT INTO whatsapp_sessions (id, session_data, updated_at) 
+            INSERT INTO baileys_sessions (id, session_data, updated_at) 
             VALUES ($1, $2, CURRENT_TIMESTAMP)
             ON CONFLICT (id) 
             DO UPDATE SET session_data = $2, updated_at = CURRENT_TIMESTAMP
@@ -20,7 +20,7 @@ export const usePostgresAuthState = async (pool, sessionName = 'baileys_session'
     };
 
     const readData = async (id) => {
-        const res = await pool.query(`SELECT session_data FROM whatsapp_sessions WHERE id = $1`, [`${sessionName}-${id}`]);
+        const res = await pool.query(`SELECT session_data FROM baileys_sessions WHERE id = $1`, [`${sessionName}-${id}`]);
         if (res.rows.length > 0) {
             return JSON.parse(res.rows[0].session_data, BufferJSON.reviver);
         }
@@ -28,7 +28,7 @@ export const usePostgresAuthState = async (pool, sessionName = 'baileys_session'
     };
 
     const removeData = async (id) => {
-        await pool.query(`DELETE FROM whatsapp_sessions WHERE id = $1`, [`${sessionName}-${id}`]);
+        await pool.query(`DELETE FROM baileys_sessions WHERE id = $1`, [`${sessionName}-${id}`]);
     };
 
     const creds = await readData('creds') || initAuthCreds();
