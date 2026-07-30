@@ -66,6 +66,7 @@ async function connectToWhatsApp() {
         puppeteer: {
             executablePath: await puppeteer.executablePath(),
             headless: true,
+            dumpio: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         }
     });
